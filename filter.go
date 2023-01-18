@@ -1,7 +1,6 @@
 package mgodumper
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -28,8 +27,8 @@ func NewFilter(parsers []<-chan bson.Raw, pick []string, output io.Writer, limit
 func (f *Filter) SetQuery(query string) error {
 	q := bson.M{}
 
-	if err := json.Unmarshal([]byte(query), &q); err != nil {
-		return err
+	if err := bson.UnmarshalExtJSON([]byte(query), false, &q); err != nil {
+		return fmt.Errorf("cannot parse extjson: %w", err)
 	}
 
 	f.query = q
@@ -61,6 +60,8 @@ func (f *Filter) Start() error {
 			case bson.TypeObjectID:
 				m[field] = rawValue.ObjectID()
 			case bson.TypeDateTime:
+				m[field] = rawValue.Time()
+			case bson.TypeTimestamp:
 				m[field] = rawValue.DateTime()
 			case bson.TypeArray:
 				var arr []interface{}
