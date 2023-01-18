@@ -18,10 +18,16 @@ type Filter struct {
 	limit   int
 
 	query bson.M
+
+	propertyFilter *PropertyFilter
 }
 
 func NewFilter(parsers []<-chan bson.Raw, pick []string, output io.Writer, limit int) *Filter {
 	return &Filter{parsers: parsers, pick: pick, limit: limit, output: output}
+}
+
+func (f *Filter) SetPropertyFilter(filter *PropertyFilter) {
+	f.propertyFilter = filter
 }
 
 func (f *Filter) SetQuery(query string) error {
@@ -79,7 +85,19 @@ func (f *Filter) Start() error {
 			return err
 		}
 
-		if match {
+		propertyMatched := true
+
+		if f.propertyFilter != nil {
+			prop := m[f.propertyFilter.Field]
+			propString, ok := prop.(string)
+			if ok && propString != "" {
+				if _, ok := f.propertyFilter.eqMap[propString]; !ok {
+					propertyMatched = false
+				}
+			}
+		}
+
+		if match && propertyMatched {
 			matched++
 			if err := f.format(m); err != nil {
 				return err

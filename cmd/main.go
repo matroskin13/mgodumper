@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -21,6 +23,7 @@ func process() error {
 	outputPath := flag.String("output", "output.json", "Specify output file")
 	query := flag.String("query", "{}", "Specify query for filter documents")
 	fieldsRaw := flag.String("fields", "_id", "Specify field in output documents")
+	propertyFilterPath := flag.String("property-filter", "", "")
 	path := flag.String("path", "", "")
 
 	flag.Parse()
@@ -46,5 +49,31 @@ func process() error {
 		return err
 	}
 
+	if propertyFilterPath != nil && *propertyFilterPath != "" {
+		pf, err := loadPropertyFilter(*propertyFilterPath)
+		if err != nil {
+			return err
+		}
+
+		pf.Generate()
+
+		filter.SetPropertyFilter(pf)
+	}
+
 	return filter.Start()
+}
+
+func loadPropertyFilter(path string) (*mgodumper.PropertyFilter, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var propFilter mgodumper.PropertyFilter
+
+	if err := json.Unmarshal(b, &propFilter); err != nil {
+		return nil, err
+	}
+
+	return &propFilter, nil
 }
