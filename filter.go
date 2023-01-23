@@ -9,6 +9,7 @@ import (
 	"github.com/256dpi/lungo/mongokit"
 	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Filter struct {
@@ -89,9 +90,16 @@ func (f *Filter) Start() error {
 
 		if f.propertyFilter != nil {
 			prop := m[f.propertyFilter.Field]
-			propString, ok := prop.(string)
-			if ok && propString != "" {
-				if _, ok := f.propertyFilter.eqMap[propString]; !ok {
+
+			switch x := prop.(type) {
+			case string:
+				if x != "" {
+					if _, ok := f.propertyFilter.eqMap[x]; !ok {
+						propertyMatched = false
+					}
+				}
+			case primitive.ObjectID:
+				if _, ok := f.propertyFilter.eqMap[x.Hex()]; !ok {
 					propertyMatched = false
 				}
 			}
